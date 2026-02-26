@@ -4,7 +4,7 @@
 #include "hardware/adc.h"
 #include "pico/stdlib.h"
 #include "snek/snek.h"
-#include "snek/entity.h"
+#include "fonts.h"
 #include <string>
 
 extern "C" {
@@ -63,45 +63,73 @@ int main()
 
     // epaper init
     if(DEV_Module_Init()!=0)
-    {
+    {   
         printf("fail");
         return -1;
     }
 
-    EPD_4IN2_V2_Init();
-    EPD_4IN2_V2_Clear();    
-    if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
-        printf("Failed to apply for black memory...\r\n");
-        return -1;
-    }
-    Paint_NewImage(BlackImage, EPD_4IN2_V2_WIDTH, EPD_4IN2_V2_HEIGHT, 0, WHITE);
-    Paint_SelectImage(BlackImage);
-    Paint_Clear(WHITE);
-    EPD_4IN2_V2_Display(BlackImage);
-    // DEV_Delay_ms(2000);
-    // end epaper init
-
-    grid gameGrid(1,1, 16, 16, 16, BlackImage);
-    std::string playerName = "p";
-    entity player (playerName, 1, 1, gameGrid);
-
-    gameGrid.SetImage();
-    gameGrid.DrawBox();
-    gameGrid.Display();
-
-    sleep_ms(500);
-
-    player.Draw();
-    int xspeed = 1;
-
-    while (true) {
-        gpio_put(LED_PIN, 0);
+    while (true)
+    {
+        EPD_4IN2_V2_Init();
+        EPD_4IN2_V2_Clear();    
+        if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
+            printf("Failed to apply for black memory...\r\n");
+            return -1;
+        }
+        Paint_NewImage(BlackImage, EPD_4IN2_V2_WIDTH, EPD_4IN2_V2_HEIGHT, 0, WHITE);
+        Paint_SelectImage(BlackImage);
+        Paint_Clear(WHITE);
+        Paint_DrawString_EN(EPD_4IN2_V2_WIDTH - 150, 16, "SNAKE", &Font24, BLACK, WHITE);
+        EPD_4IN2_V2_Display(BlackImage);
+        // DEV_Delay_ms(2000);
+        // end epaper init
         
-        stickInput input = GetInput();
-        player.TryMove(input.x_axis, -input.y_axis);
+        grid gameGrid(1,1, 6, 6, 40, BlackImage);
+        snake player (gameGrid, 2, 2);
         
-        gpio_put(LED_PIN, 0);
+        gameGrid.Init();
+        gameGrid.DrawBox();
+        gameGrid.Display();
+        
+        sleep_ms(1000);
+        
+        player.Init();
+        
+        sleep_ms(100);
+        
+        int xspeed = 1;
+        int step = 0;
+        
+        while (true) 
+        {
+            gpio_put(LED_PIN, 0);
+            
+            stickInput input = GetInput();
+            if (!player.Step(input.x_axis, -input.y_axis))
+            {
+                Paint_DrawString_EN(20,20, "GAME", &Font24, BLACK, WHITE);
+                gameGrid.Display();
+                sleep_ms(500);
+                Paint_DrawString_EN(20,60, "  OVER", &Font24, BLACK, WHITE);
+                gameGrid.Display();
+                sleep_ms(500);
+                EPD_4IN2_V2_Sleep();
+                break;
+            }
+            
+            gameGrid.Display();
+            
+            step++;
+            if (step >= 10)
+            {
+                player.Length++;
+                step = 0;
+            }
+            
+            gpio_put(LED_PIN, 1);
+            sleep_ms(100);
+        }
     }
-
+        
     return 0;
 }
