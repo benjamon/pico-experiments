@@ -53,8 +53,8 @@ int main()
 
     adc_init();
 
-    adc_gpio_init(26);
-    adc_gpio_init(27);
+    adc_gpio_init(26); // y pin
+    adc_gpio_init(27); // x pin?
 
     const uint LED_PIN = 16;
     gpio_init(LED_PIN);
