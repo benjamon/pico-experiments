@@ -25,6 +25,7 @@ text = '> '
 current = ''
 full = ''
 isOn = False
+reset = False
 start_time = 0
 stop_time = -1
 
@@ -72,8 +73,8 @@ while True:
         if not isOn:
             isOn = True
             start_time = time.ticks_ms()
-            text = 'd... '
-            update_text()
+            text = '>>    '
+            lcd.write(0,1, text)
         elif time.ticks_ms() - start_time > RESET_TIME:
             text = '>       '
             current = ''
@@ -82,6 +83,7 @@ while True:
             lcd.write(0,1, '                ')
             start_time = time.ticks_ms()
             isOn = False
+            reset = True
             update_text()
         elif time.ticks_ms() - start_time > DIT_TIME:
             text = 'DAH -'
@@ -100,7 +102,11 @@ while True:
                 current += '-'
                 update_text()
         elif time.ticks_ms() - stop_time > LETTER_TIME:
-            full += letters.get(current, '')
+            if reset:
+                reset = False
+                full = ''
+            else:
+                full += letters.get(current, '')
             current = ''
             text = '>        '
             lcd.write(0,0,full + '        ')
