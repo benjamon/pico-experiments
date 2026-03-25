@@ -1,24 +1,9 @@
 from lcd1602 import LCD
-from machine import Pin
+from machine import ADC, Pin
 import time
 
-class fpm:
-    def __init__(self, pin_number):
-            self.pin = machine.Pin(pin_number, machine.Pin.IN, machine.Pin.PULL_UP)
-            self._state = self.pin.value()
-            self.pin.irq(handler=self._handle_trigger, trigger=machine.Pin.IRQ_FALLING | machine.Pin.IRQ_RISING)
-
-    # Compiles this function to native ARM assembly
-    @micropython.native
-    def _handle_trigger(self, pin):
-        self._state = pin.value()
-        
-    def value(self):
-        """Returns the most recent state captured by the interrupt."""
-        return self._state
-
 lcd = LCD()
-btn = fpm(18)
+btn = ADC(Pin(27))
 led = Pin(16, Pin.OUT)
 
 text = '> '
@@ -29,9 +14,10 @@ reset = False
 start_time = 0
 stop_time = -1
 
-DIT_TIME = 150
+IGNORE_TIME = 30
+DIT_TIME = 300
 RESET_TIME = 2000
-LETTER_TIME = 400
+LETTER_TIME = 1000
 
 letters = {
         '.-': 'A',
@@ -68,7 +54,11 @@ def update_text():
     lcd.write(0,1, text)
 
 while True:
-    if not btn.value():
+    btnPressed = False
+    volt = btn.read_u16()
+    if volt > 1000:
+        btnPressed = True
+    if not btnPressed:
         led.value(1)
         if not isOn:
             isOn = True
@@ -93,7 +83,11 @@ while True:
         if isOn:
             isOn = False
             stop_time = time.ticks_ms()
-            if time.ticks_ms() - start_time < DIT_TIME:
+            duration = time.ticks_ms() - start_time
+            if duration < IGNORE_TIME:
+                text = ">    "
+                update_text()
+            elif duration < DIT_TIME:
                 text = 'DIT *'
                 current += '.'
                 update_text()
@@ -111,4 +105,5 @@ while True:
             text = '>        '
             lcd.write(0,0,full + '        ')
             update_text()
+        time.sleep_ms(10)
             
